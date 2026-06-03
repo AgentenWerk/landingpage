@@ -49,20 +49,57 @@ const formatsAndSystems = [
 export function QualificationForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    handleRequest();
+    void handleRequest();
   }
 
-  function handleRequest() {
+  async function handleRequest() {
     const form = formRef.current;
 
     if (!form?.reportValidity()) {
       return;
     }
 
-    setSubmitted(true);
+    const formData = new FormData(form);
+    const payload = {
+      name: String(formData.get("name") ?? ""),
+      company: String(formData.get("company") ?? ""),
+      email: String(formData.get("email") ?? ""),
+      phone: String(formData.get("phone") ?? ""),
+      city: String(formData.get("city") ?? ""),
+      tenders: String(formData.get("tenders") ?? ""),
+      teamSize: String(formData.get("teamSize") ?? ""),
+      trades: formData.getAll("trades").map(String),
+      formatsAndSystems: formData.getAll("formatsAndSystems").map(String),
+      dataAvailability: String(formData.get("dataAvailability") ?? "")
+    };
+
+    setSubmitting(true);
+    setServerError(null);
+
+    try {
+      const response = await fetch("/api/qualification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = (await response.json()) as { ok: boolean; error?: string };
+
+      if (!response.ok || !data.ok) {
+        setServerError(data.error ?? "Die Anfrage konnte nicht gesendet werden.");
+        return;
+      }
+
+      setSubmitted(true);
+    } catch {
+      setServerError("Die Anfrage konnte nicht gesendet werden.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -192,12 +229,21 @@ export function QualificationForm() {
           </fieldset>
 
           <button
-            type="button"
-            onClick={handleRequest}
-            className="mt-7 w-full rounded-md bg-[var(--accent)] px-5 py-3 text-base font-semibold text-white transition hover:bg-[var(--accent-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 sm:w-auto"
+            type="submit"
+            disabled={submitting}
+            className="mt-7 w-full rounded-md bg-[var(--accent)] px-5 py-3 text-base font-semibold text-white transition hover:bg-[var(--accent-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-offset-2 disabled:opacity-60 sm:w-auto"
           >
-            Prüfung anfragen
+            {submitting ? "Wird gesendet..." : "Prüfung anfragen"}
           </button>
+
+          {serverError ? (
+            <p
+              role="alert"
+              className="mt-5 rounded-md border border-[#efc5c0] bg-[#fff5f3] px-4 py-3 text-sm font-semibold text-[#8a2d24]"
+            >
+              {serverError}
+            </p>
+          ) : null}
 
           {submitted ? (
             <p
