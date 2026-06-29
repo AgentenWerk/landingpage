@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useRef, useState } from "react";
 
 const tendersPerMonth = ["1-2", "3-5", "6-10", "Mehr als 10"];
@@ -235,6 +236,18 @@ export function QualificationForm() {
           >
             {submitting ? "Wird gesendet..." : "Prüfung anfragen"}
           </button>
+
+          <p className="mt-4 max-w-2xl text-xs leading-5 text-[#68737a]">
+            Mit dem Absenden verarbeiten wir Ihre Angaben zur Bearbeitung der
+            Anfrage und Kontaktaufnahme. Details finden Sie in der{" "}
+            <Link
+              href="/datenschutz"
+              className="font-semibold text-[var(--accent-dark)] underline decoration-[#9db8c9] underline-offset-4 transition hover:text-[var(--accent)]"
+            >
+              Datenschutzerklärung
+            </Link>
+            .
+          </p>
 
           {serverError ? (
             <p
