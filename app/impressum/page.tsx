@@ -13,6 +13,7 @@ const dubaiDetails: DetailRow[] = [
   ["Rechtsform", "Limited Liability Company, Meydan Free Zone"],
   ["Lizenznummer", "2650237.01"],
   ["Formation Number", "2650237"],
+  ["Corporate Tax Registration Number", "105507193800001"],
   [
     "Anschrift",
     "Meydan Grandstand, 6th floor, Meydan Road, Nad Al Sheba, Dubai, U.A.E."
