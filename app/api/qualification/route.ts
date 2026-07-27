@@ -8,6 +8,25 @@ import {
 export const runtime = "nodejs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_BODY_BYTES = 16 * 1024;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 5;
+const requestCounts = new Map<string, { count: number; resetAt: number }>();
+
+const fieldLimits: Partial<Record<keyof KiQualificationValues, number>> = {
+  name: 120,
+  company: 160,
+  email: 254,
+  phone: 40,
+  city: 120,
+  tenders: 40,
+  teamSize: 40,
+  dataAvailability: 40,
+};
+
+type BodyReadResult =
+  | { ok: true; value: Record<string, unknown> }
+  | { ok: false; status: 400 | 413; error: string };
 
 function asString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -55,29 +74,149 @@ function validate(values: KiQualificationValues): Record<string, string> {
     errors.email = "Bitte geben Sie eine gültige E-Mail-Adresse ein.";
   }
 
+  for (const [field, limit] of Object.entries(fieldLimits) as [
+    keyof KiQualificationValues,
+    number,
+  ][]) {
+    const value = values[field];
+    if (typeof value === "string" && value.length > limit) {
+      errors[field] = "Diese Angabe ist zu lang.";
+    }
+  }
+
+  if (
+    values.trades.length > 10 ||
+    values.formatsAndSystems.length > 10 ||
+    [...values.trades, ...values.formatsAndSystems].some(
+      (value) => value.length > 120,
+    )
+  ) {
+    errors.form = "Die Formulardaten sind ungültig.";
+  }
+
   return errors;
 }
 
-export async function POST(request: Request) {
+function clientAddress(request: Request): string | null {
+  const netlifyAddress = request.headers
+    .get("x-nf-client-connection-ip")
+    ?.trim();
+  if (netlifyAddress) return netlifyAddress;
+
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+}
+
+function retryAfterSeconds(request: Request): number | null {
+  const address = clientAddress(request);
+  if (!address) return null;
+
+  const now = Date.now();
+  if (requestCounts.size > 500) {
+    for (const [storedAddress, entry] of requestCounts) {
+      if (entry.resetAt <= now) requestCounts.delete(storedAddress);
+    }
+  }
+
+  const current = requestCounts.get(address);
+
+  if (!current || current.resetAt <= now) {
+    requestCounts.set(address, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return null;
+  }
+
+  current.count += 1;
+  if (current.count <= RATE_LIMIT_MAX_REQUESTS) return null;
+
+  return Math.max(1, Math.ceil((current.resetAt - now) / 1000));
+}
+
+async function readJsonObject(request: Request): Promise<BodyReadResult> {
+  const contentLength = Number(request.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
+    return {
+      ok: false,
+      status: 413,
+      error: "Die Anfrage ist zu groß.",
+    };
+  }
+
+  if (!request.body) {
+    return { ok: false, status: 400, error: "Invalid JSON body." };
+  }
+
+  const reader = request.body.getReader();
+  const decoder = new TextDecoder();
+  let receivedBytes = 0;
+  let text = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    receivedBytes += value.byteLength;
+    if (receivedBytes > MAX_BODY_BYTES) {
+      await reader.cancel().catch(() => undefined);
+      return {
+        ok: false,
+        status: 413,
+        error: "Die Anfrage ist zu groß.",
+      };
+    }
+
+    text += decoder.decode(value, { stream: true });
+  }
+  text += decoder.decode();
+
   let raw: unknown;
-
   try {
-    raw = await request.json();
+    raw = JSON.parse(text);
   } catch {
+    return { ok: false, status: 400, error: "Invalid JSON body." };
+  }
+
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    return { ok: false, status: 400, error: "Expected a JSON object." };
+  }
+
+  return { ok: true, value: raw as Record<string, unknown> };
+}
+
+export async function POST(request: Request) {
+  const retryAfter = retryAfterSeconds(request);
+  if (retryAfter !== null) {
     return NextResponse.json(
-      { ok: false, error: "Invalid JSON body." },
-      { status: 400 },
+      {
+        ok: false,
+        error: "Zu viele Anfragen. Bitte versuchen Sie es später erneut.",
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(retryAfter) },
+      },
     );
   }
 
-  if (typeof raw !== "object" || raw === null) {
+  const body = await readJsonObject(request);
+  if (!body.ok) {
     return NextResponse.json(
-      { ok: false, error: "Expected a JSON object." },
-      { status: 400 },
+      { ok: false, error: body.error },
+      { status: body.status },
     );
   }
 
-  const values = normalise(raw as Record<string, unknown>);
+  if (asString(body.value.website)) {
+    return NextResponse.json({
+      ok: true,
+      leadId: `lead_${randomUUID()}`,
+      message:
+        "Danke. Wir melden uns, um einen passenden Gesprächstermin abzustimmen.",
+    });
+  }
+
+  const values = normalise(body.value);
   const fields = validate(values);
 
   if (Object.keys(fields).length > 0) {

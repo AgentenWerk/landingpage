@@ -74,6 +74,7 @@ export function QualificationForm() {
       city: String(formData.get("city") ?? ""),
       tenders: String(formData.get("tenders") ?? ""),
       teamSize: String(formData.get("teamSize") ?? ""),
+      website: String(formData.get("website") ?? ""),
       trades: formData.getAll("trades").map(String),
       formatsAndSystems: formData.getAll("formatsAndSystems").map(String),
       dataAvailability: String(formData.get("dataAvailability") ?? "")
@@ -147,6 +148,17 @@ export function QualificationForm() {
           onSubmit={handleSubmit}
           className="rounded-lg border border-[#cfd9dc] bg-white p-4 shadow-sm sm:p-6"
         >
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -left-[10000px] h-px w-px overflow-hidden"
+          >
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <TextField label="Name" name="name" autoComplete="name" required />
             <TextField

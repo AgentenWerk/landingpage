@@ -50,6 +50,7 @@ export async function forwardKiInquiryToDashboard(
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
+      signal: AbortSignal.timeout(10_000),
       body: JSON.stringify({
         source: "ki-kalkulant",
         externalId: leadId,
