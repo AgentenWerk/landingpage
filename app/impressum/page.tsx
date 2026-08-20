@@ -40,7 +40,7 @@ const dubaiDetails: DetailRow[] = [
 ];
 
 const viennaDetails: DetailRow[] = [
-  ["Firma", "AgentenWerk KI GmbH in Gründung"],
+  ["Firma", "AgentenWerk KI GmbH"],
   ["Sitz", "Wien, Österreich"],
   ["Geschäftsanschrift", "Argentinierstraße 42-35, 1040 Wien, Österreich"],
   ["E-Mail", "rares@ki-kalkulant.de"],
@@ -54,8 +54,8 @@ const viennaDetails: DetailRow[] = [
       Alexandru-Rares Bacila
     </ExternalLink>
   ],
-  ["Firmenbuchnummer", "in Eintragung"],
-  ["Firmenbuchgericht", "wird nach Eintragung ergänzt"],
+  ["Firmenbuchnummer", "FN 686063 t"],
+  ["Firmenbuchgericht", "Handelsgericht Wien"],
   ["UID-Nummer", "wird nach Vergabe ergänzt"],
   [
     "Unternehmensgegenstand",
@@ -102,16 +102,9 @@ export default function ImpressumPage() {
           />
           <EntityCard
             eyebrow="Wien"
-            title="AgentenWerk KI GmbH in Gründung"
+            title="AgentenWerk KI GmbH"
             details={viennaDetails}
           />
-        </div>
-        <div className="mx-auto max-w-7xl px-5 pb-10 sm:px-8 lg:px-10">
-          <p className="rounded-lg border border-[#d9dedc] bg-white p-5 text-sm leading-7 text-[#4d5961]">
-            Die AgentenWerk KI GmbH befindet sich in Gründung. Firmenbuchnummer,
-            Firmenbuchgericht und UID werden nach Eintragung beziehungsweise
-            Vergabe ergänzt.
-          </p>
         </div>
       </section>
     </main>

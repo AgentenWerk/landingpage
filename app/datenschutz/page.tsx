@@ -17,7 +17,7 @@ const controllerDetails = [
     ]
   },
   {
-    title: "AgentenWerk KI GmbH in Gründung",
+    title: "AgentenWerk KI GmbH",
     rows: [
       ["Anschrift", "Argentinierstraße 42-35, 1040 Wien, Österreich"],
       ["E-Mail", "rares@ki-kalkulant.de"],
