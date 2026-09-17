@@ -1,0 +1,12 @@
+# Merge these rules before existing catch-all routing in the marketing project.
+[[redirects]]
+from = "/demo"
+to = "https://demo-origin.ki-kalkulant.de/demo"
+status = 200
+force = true
+
+[[redirects]]
+from = "/demo/*"
+to = "https://demo-origin.ki-kalkulant.de/demo/:splat"
+status = 200
+force = true
